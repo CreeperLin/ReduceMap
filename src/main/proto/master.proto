@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.acm.reducemap.master";
+option java_generic_services = false;
+//option java_outer_classname = "MasterProto";
+option objc_class_prefix = "RMM";
+
+package reducemap.master;
+
+// master service
+service Master {
+  // worker register at master
+  rpc Register (RegisterRequest) returns (RegisterReply) {}
+  // worker send liveness info to master
+  rpc Heartbeat (HeartbeatRequest) returns (HeartbeatReply) {}
+}
+
+// register request message to master
+message RegisterRequest {
+    string ip_address = 1;
+    int32 port = 2;
+}
+
+// register reply message to worker
+message RegisterReply {
+    int32 worker_id = 1;
+}
+
+// heartbeat request message to master
+message HeartbeatRequest {
+    int32 worker_id = 1;
+    int32 timestamp = 2;
+}
+
+// heartbeat reply message to worker
+message HeartbeatReply {
+    int32 status = 1;
+}

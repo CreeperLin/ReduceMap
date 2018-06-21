@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "org.acm.reducemap.worker";
+option java_generic_services = false;
+//option java_outer_classname = "WorkerProto";
+option objc_class_prefix = "RMW";
+
+package reducemap.worker;
+
+service Worker {
+    // master assign work to workers
+    rpc AssignWork (AssignWorkRequest) returns (AssignWorkReply) {}
+    // master stop worker
+    rpc HaltWorker(HaltWorkerRequest) returns (HaltWorkerReply) {}
+}
+
+message AssignWorkRequest {
+    int32 work_type = 1;
+    int32 work_id = 2;
+}
+
+message AssignWorkReply {
+    int32 status = 1;
+}
+
+message HaltWorkerRequest {
+    int32 reason = 1;
+}
+
+message HaltWorkerReply {
+    int32 status = 1;
+}

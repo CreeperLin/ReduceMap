@@ -35,7 +35,7 @@ public class WorkerRPCClient {
     }
 
     //provide interface for worker RPC call
-    void register(String ip, int port) {
+    RegisterReply register(String ip, int port) {
         logger.info("Will try to register: ip:"+ip+" port:"+port);
         RegisterRequest request = RegisterRequest.newBuilder().setIpAddress(ip).setPort(port).build();
         RegisterReply response;
@@ -43,9 +43,9 @@ public class WorkerRPCClient {
             response = blockingStub.register(request);
         } catch (StatusRuntimeException e) {
             logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
-            return;
+            return null;
         }
-        logger.info("get WorkerId: " + response.getWorkerId());
+        return response;
     }
 
 }

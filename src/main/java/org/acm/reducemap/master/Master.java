@@ -2,6 +2,7 @@ package org.acm.reducemap.master;
 
 import org.acm.reducemap.common.RPCAddress;
 import org.acm.reducemap.common.RPCConfig;
+import org.acm.reducemap.worker.AssignWorkReply;
 
 import java.io.IOException;
 import java.util.Random;
@@ -26,6 +27,7 @@ public class Master {
     }
 
     //implementation begins here
+    // on receiving worker RPC calls
     void onRegister(RegisterReply.Builder reply, RegisterRequest req) {
         logger.info("recvReq Register ip:"+req.getIpAddress()+" port:"+req.getPort());
         int id = getCurWorkerId();
@@ -35,7 +37,7 @@ public class Master {
 
     void onHeartbeat(HeartbeatReply.Builder reply, HeartbeatRequest req) {
         logger.info("recvReq Heartbeat id:"+req.getWorkerId());
-        workerMan.keepaliveWorker(req.getWorkerId());
+        workerMan.keepAliveWorker(req.getWorkerId());
         reply.setStatus(1);
     }
 
@@ -44,22 +46,30 @@ public class Master {
         for (int i=1;i<=t;++i) {
             logger.info("Schedule:AssignWork:"+i);
             Vector<WorkerManager.workerInfo> avail = new Vector<>();
-            while (avail.isEmpty()){
-                workerMan.getAliveWorkers(avail);
+            while (true) {
+                while (avail.isEmpty()){
+                    workerMan.getAliveWorkers(avail);
+                }
+                int idx = new Random().nextInt(avail.size());
+                WorkerManager.workerInfo info = avail.get(idx);
+//              System.out.println("info:"+info.workerId);
+                MasterRPCClient rpc = info.cli; // or rpc = workerMan.getWorkerRPC(info.workerId)
+                AssignWorkReply reply = rpc.assignWork(i%5,i); //demo
+                if (reply==null) continue;
+                int status = reply.getStatus();
+                System.out.println("get worker status:"+status);
+                break;
             }
-            int idx = new Random().nextInt(avail.size());
-            WorkerManager.workerInfo info = avail.get(idx);
-//            System.out.println("info:"+info.workerId);
-            MasterRPCClient rpc = info.cli;
-            rpc.assignWork(i%5,i);
         }
+        logger.info("Schedule:complete");
     }
 
     private void run() throws IOException, InterruptedException {
         server.start();
         testSchedule();
         workerMan.haltAllWorker();
-        server.blockUntilShutdown();
+        server.stop();
+//        server.blockUntilShutdown();
     }
 
     //usage: [port]

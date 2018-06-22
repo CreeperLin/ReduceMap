@@ -1,6 +1,7 @@
 package org.acm.reducemap.master;
 
 import org.acm.reducemap.common.RPCAddress;
+import org.acm.reducemap.worker.HaltWorkerReply;
 
 import java.util.HashMap;
 import java.util.Vector;
@@ -29,7 +30,7 @@ public class WorkerManager {
         workerMap.put(id,new workerInfo(addr, id));
     }
 
-    synchronized void keepaliveWorker(int id) {
+    synchronized void keepAliveWorker(int id) {
         workerInfo wk = workerMap.get(id);
         if (wk == null) return;
         wk.lastAlive = System.currentTimeMillis()/1000;
@@ -67,7 +68,8 @@ public class WorkerManager {
         workerMap.forEach((i,j)->{
             if (j.isAlive) {
                 try {
-                    j.cli.haltWorker();
+                    HaltWorkerReply reply = j.cli.haltWorker(1);
+                    if (reply!=null) System.out.println("WorkerMan: worker halted: id:"+i);
                     j.cli.shutdown();
                 } catch (InterruptedException ignored){}
             }

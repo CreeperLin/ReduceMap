@@ -35,7 +35,8 @@ The configuration file is pom.xml **(do not modify)**
 
 - using IntelliJ IDEA (any platform) (recommended)
     1. import the project as a Maven project.
-    2. switch to pom.xml and update Maven project.
+    2. wait for libraries and plugins to download.
+    2. switch to pom.xml and select 'Generate Sources and Update Folders' from the menu.
 - use command line (Linux maybe)
     1. install maven.
     2. Use maven to build project.
@@ -54,7 +55,9 @@ master_address: IP address of master (default: localhost)
 
 master_port: port of master (default: 50051) 
 
-## Implementaion & Dev
+## Implementation & Dev
+### Current Issues
+- RPCClient needs to be manually updated when modifying RPC methods.
 ### Master
 Supported Master service(called by worker):
 - onRegister: register new worker and assign id
@@ -65,7 +68,7 @@ Supported Worker service(called by master):
 - Halt: stop worker (when no work to assign, etc.)
 
 Function:
-- Maintain worker info(address, id, liveness, etc.)
+- Maintain worker info(address, id, liveliness, etc.)
 - Schedule tasks for workers
 - Merge worker outputs
 - Handle worker failures
@@ -76,7 +79,7 @@ Supported Worker service(called by master):
 
 Supported Master service(called by worker):
 - Register: send address to master and obtain an id
-- Heartbeat: send liveness information to master
+- Heartbeat: send liveliness information to master
 
 Function:
 - Receive task
@@ -84,14 +87,15 @@ Function:
 - Process data(map or reduce or anything)
 - Output result
 ### RPC methods
+(in progress)
 - to call master(in worker):
 ```java
-client.<method_name>(<args>);
+<MethodReply> reply = client.<method_name>(<args>); // null if RPC failed
 ```
 - to call worker(in master):
 ```java
 int id = <worker_id>;
-workerMan.getWorkerRPC(id).<method_name>(<args>);
+<MethodReply> reply = workerMan.getWorkerRPC(id).<method_name>(<args>); // null if failed
 ```
 ### TODOs:
 - make presentation

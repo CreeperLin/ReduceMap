@@ -32,30 +32,30 @@ public class MasterRPCClient {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
-    //provide interface for master RPC call
-    void haltWorker() {
-        logger.info("Will try to halt");
-        HaltWorkerRequest req = HaltWorkerRequest.newBuilder().setReason(1).build();
+    //provide interface for master RPC call (cannot be generated currently)
+    HaltWorkerReply haltWorker(int reason) {
+        logger.info("Will try to halt worker");
+        HaltWorkerRequest req = HaltWorkerRequest.newBuilder().setReason(reason).build();
         HaltWorkerReply reply;
         try {
             reply = blockingStub.haltWorker(req);
         } catch (StatusRuntimeException e) {
             logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
-            return;
+            return null;
         }
-        logger.info("get status: " + reply.getStatus());
+        return reply;
     }
 
-    void assignWork(int workType, int workId) {
+    AssignWorkReply assignWork(int workType, int workId) {
         logger.info("Will try to request AssignWork: type:"+workType+" id:"+workId);
         AssignWorkRequest request = AssignWorkRequest.newBuilder().setWorkType(workType).setWorkId(workId).build();
-        AssignWorkReply response;
+        AssignWorkReply reply;
         try {
-            response = blockingStub.assignWork(request);
+            reply = blockingStub.assignWork(request);
         } catch (StatusRuntimeException e) {
             logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
-            return;
+            return null;
         }
-        logger.info("get status: " + response.getStatus());
+        return reply;
     }
 }

@@ -12,6 +12,7 @@ public class WorkerManager {
     public class workerInfo {
 
         boolean isAlive;
+        boolean isBusy;
         int workerId;
         long lastAlive;
         MasterRPCClient cli;
@@ -66,10 +67,33 @@ public class WorkerManager {
         wk.isAlive = true;
     }
 
+    synchronized void busyWorker(int id) {
+        workerInfo wk = workerMap.get(id);
+        if (wk == null || !wk.isAlive) return;
+        wk.isBusy = true;
+        System.out.println("busy worker:"+id);
+    }
+
+    synchronized void freeWorker(int id) {
+        workerInfo wk = workerMap.get(id);
+        if (wk == null || !wk.isAlive) return;
+        wk.isBusy = false;
+        System.out.println("freed worker:"+id);
+    }
+
     synchronized void getAliveWorkers(Vector<workerInfo> ret) {
         ret.clear();
         workerMap.forEach((i,j)->{
             if (j.isAlive) {
+                ret.add(j);
+            }
+        });
+    }
+
+    synchronized void getAvailableWorkers(Vector<workerInfo> ret) {
+        ret.clear();
+        workerMap.forEach((i,j)->{
+            if (j.isAlive && !j.isBusy) {
                 ret.add(j);
             }
         });

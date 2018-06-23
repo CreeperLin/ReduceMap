@@ -3,6 +3,7 @@ package org.acm.reducemap.worker;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import org.acm.reducemap.master.MasterGrpc;
 import org.acm.reducemap.master.RegisterReply;
 import org.acm.reducemap.master.RegisterRequest;
@@ -16,6 +17,7 @@ public class WorkerRPCClient {
 
     private final ManagedChannel channel;
     private final MasterGrpc.MasterBlockingStub blockingStub;
+    private final MasterGrpc.MasterStub stub;
 
     /** Construct client connecting to master at {@code host:port}. */
     WorkerRPCClient(String host, int port) {
@@ -28,6 +30,7 @@ public class WorkerRPCClient {
     private WorkerRPCClient(ManagedChannel channel) {
         this.channel = channel;
         blockingStub = MasterGrpc.newBlockingStub(channel);
+        stub = MasterGrpc.newStub(channel);
     }
 
     void shutdown() throws InterruptedException {
@@ -38,24 +41,24 @@ public class WorkerRPCClient {
     Object call(String methodName, Object req) {
         try {
             return blockingStub.getClass().getMethod(methodName, req.getClass()).invoke(blockingStub, req);
+        } catch (StatusRuntimeException e) {
+            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
         } catch (Exception e) {
-            logger.log(Level.WARNING, "RPC failed: {0}", e.getMessage());
+            logger.log(Level.WARNING, "Invalid RPC Call: {0}", e.toString());
         }
         return null;
     }
 
-    //provide interface for worker RPC call (deprecated?)
-    RegisterReply register(String ip, int port) {
-        logger.info("Will try to register: ip:"+ip+" port:"+port);
-        RegisterRequest request = RegisterRequest.newBuilder().setIpAddress(ip).setPort(port).build();
-        RegisterReply response;
+    boolean asyncCall(String methodName, Object req, StreamObserver observer) {
         try {
-            response = blockingStub.register(request);
+            stub.getClass().getMethod(methodName, req.getClass(), StreamObserver.class).invoke(stub, req, observer);
+            return true;
         } catch (StatusRuntimeException e) {
-            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
-            return null;
+            observer.onError(e);
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Invalid RPC Call: {0}", e.toString());
         }
-        return response;
+        return false;
     }
 
 }

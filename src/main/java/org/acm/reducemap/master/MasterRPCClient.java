@@ -3,6 +3,7 @@ package org.acm.reducemap.master;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import org.acm.reducemap.worker.*;
 
 import java.util.concurrent.TimeUnit;
@@ -14,6 +15,7 @@ public class MasterRPCClient {
 
     private final ManagedChannel channel;
     private final WorkerGrpc.WorkerBlockingStub blockingStub;
+    private final WorkerGrpc.WorkerStub stub;
 
     /** Construct client connecting to worker at {@code host:port}. */
     MasterRPCClient(String host, int port) {
@@ -26,6 +28,7 @@ public class MasterRPCClient {
     private MasterRPCClient(ManagedChannel channel) {
         this.channel = channel;
         blockingStub = WorkerGrpc.newBlockingStub(channel);
+        stub = WorkerGrpc.newStub(channel);
     }
 
     void shutdown() throws InterruptedException {
@@ -36,36 +39,24 @@ public class MasterRPCClient {
     Object call(String methodName, Object req) {
         try {
             return blockingStub.getClass().getMethod(methodName, req.getClass()).invoke(blockingStub, req);
+        } catch (StatusRuntimeException e) {
+            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
         } catch (Exception e) {
-            logger.log(Level.WARNING, "RPC failed: {0}", e.getMessage());
+            e.printStackTrace();
         }
         return null;
     }
 
-    //provide interface for master RPC call (cannot be generated currently)
-    HaltWorkerReply haltWorker(int reason) {
-        logger.info("Will try to halt worker");
-        HaltWorkerRequest req = HaltWorkerRequest.newBuilder().setReason(reason).build();
-        HaltWorkerReply reply;
+    boolean asyncCall(String methodName, Object req, StreamObserver<?> observer) {
         try {
-            reply = blockingStub.haltWorker(req);
+            stub.getClass().getMethod(methodName, req.getClass(), StreamObserver.class).invoke(stub, req, observer);
+            return true;
         } catch (StatusRuntimeException e) {
-            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
-            return null;
+            observer.onError(e);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return reply;
+        return false;
     }
 
-    AssignWorkReply assignWork(int workType, int workId) {
-        logger.info("Will try to request AssignWork: type:"+workType+" id:"+workId);
-        AssignWorkRequest request = AssignWorkRequest.newBuilder().setWorkType(workType).setWorkId(workId).build();
-        AssignWorkReply reply;
-        try {
-            reply = blockingStub.assignWork(request);
-        } catch (StatusRuntimeException e) {
-            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
-            return null;
-        }
-        return reply;
-    }
 }

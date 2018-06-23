@@ -47,7 +47,7 @@ Master.main [port]
 
 port: port for master to run on (default: 50051) 
 ### Worker
-Worker.main [port] master_address master_port
+Worker.main master_address master_port [port]
 
 port: port for worker to run on (default: 50052)
 
@@ -89,14 +89,35 @@ Function:
 ### RPC methods
 (in progress)
 - to call master(in worker):
+
+sync call
 ```java
-<MethodReply> reply = client.<method_name>(<args>); // null if RPC failed
+MethodReply reply = 
+	(MethodReply)client.call("method",MethodRequest); // null if RPC failed
+```
+async call
+```java
+bool status = client.asyncCall("method",MethodRequest,new StreamObserver<MethodReply>{
+	@Override
+	public void onNext(MethodReply value) {}
+
+	@Override
+	public void onError(Throwable t) {}
+
+	@Override
+	public void onComplete() {}
+});
 ```
 - to call worker(in master):
+
+sync call
 ```java
 int id = <worker_id>;
-<MethodReply> reply = workerMan.getWorkerRPC(id).<method_name>(<args>); // null if failed
+MethodReply reply = 
+	(MethodReply)workerMan.getWorkerRPC(id).call("method",MethodRequest); // null if failed
 ```
+async call (see above)
+
 ### TODOs:
 - make presentation
 - master implementation

@@ -14,7 +14,7 @@ public class Worker {
     class HeartbeatThread implements Runnable {
         @Override
         public void run() {
-            HeartbeatReply reply = null;
+            HeartbeatReply reply;
             while (isRunning) {
                 int sleepTime = 10000;
                 try {
@@ -53,15 +53,12 @@ public class Worker {
     //on receiving RPC calls
     void onAssignWork(AssignWorkReply.Builder reply, AssignWorkRequest req) {
         logger.info("recvReq AssignWork: workId:"+req.getWorkId()+" workType:"+req.getWorkType());
-        System.out.println("do Work:"+req.getWorkId());
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException ignored) {}
-        reply.setStatus(++curStatus);
+        work(req.getWorkId());
+        reply.setWorkerId(workerId).setStatus(++curStatus);
     }
 
     void onHaltWorker(HaltWorkerReply.Builder reply, HaltWorkerRequest req) {
-        logger.info("recvReq Halt");
+        logger.info("recvReq Halt:"+req.getReason());
         reply.setStatus(0);
         server.stop();
         isRunning = false;
@@ -73,6 +70,14 @@ public class Worker {
         workerId = reply.getWorkerId();
     }
 
+    private void work(int workId) {
+        System.out.println("do Work:"+workId);
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignored) {}
+        System.out.println("done:"+workId);
+    }
+
     private void run() throws IOException, InterruptedException {
         String t = InetAddress.getLocalHost().getHostAddress();
 //        String t = RPCConfig.getLocalIpAddr();
@@ -80,7 +85,7 @@ public class Worker {
         server.start();
         isRunning = true;
 
-        RegisterReply reply = null;
+        RegisterReply reply;
         while (true) {
             reply = (RegisterReply) client.call("register",RegisterRequest.newBuilder().setIpAddress(t).setPort(localPort).build());
             if (reply!=null) break;
@@ -99,7 +104,7 @@ public class Worker {
         client.shutdown();
     }
 
-    //usage: [port] master_address master_port
+    //usage: master_address master_port [port]
     public static void main(String[] args) throws IOException, InterruptedException {
         if (args.length<2) {
             logger.warning("specify master address and port");

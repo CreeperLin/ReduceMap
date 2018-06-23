@@ -32,6 +32,16 @@ public class MasterRPCClient {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
+    // provide general call method
+    Object call(String methodName, Object req) {
+        try {
+            return blockingStub.getClass().getMethod(methodName, req.getClass()).invoke(blockingStub, req);
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "RPC failed: {0}", e.getMessage());
+        }
+        return null;
+    }
+
     //provide interface for master RPC call (cannot be generated currently)
     HaltWorkerReply haltWorker(int reason) {
         logger.info("Will try to halt worker");

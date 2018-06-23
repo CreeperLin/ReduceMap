@@ -31,4 +31,8 @@ public class RPCAddress {
         port = p;
     }
 
+    @Override
+    public String toString() {
+        return hostname+':'+port;
+    }
 }

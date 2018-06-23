@@ -34,7 +34,17 @@ public class WorkerRPCClient {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
-    //provide interface for worker RPC call
+    // provide general call method
+    Object call(String methodName, Object req) {
+        try {
+            return blockingStub.getClass().getMethod(methodName, req.getClass()).invoke(blockingStub, req);
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "RPC failed: {0}", e.getMessage());
+        }
+        return null;
+    }
+
+    //provide interface for worker RPC call (deprecated?)
     RegisterReply register(String ip, int port) {
         logger.info("Will try to register: ip:"+ip+" port:"+port);
         RegisterRequest request = RegisterRequest.newBuilder().setIpAddress(ip).setPort(port).build();

@@ -2,6 +2,7 @@ package org.acm.reducemap.master;
 
 import org.acm.reducemap.common.RPCAddress;
 import org.acm.reducemap.worker.HaltWorkerReply;
+import org.acm.reducemap.worker.HaltWorkerRequest;
 
 import java.util.HashMap;
 import java.util.Vector;
@@ -24,10 +25,26 @@ public class WorkerManager {
 
     }
 
+    private int curWorkerId = 0; //demo
+    private HashMap<String, Integer> addressMap = new HashMap<>();
     private HashMap<Integer,workerInfo> workerMap = new HashMap<>();
 
-    synchronized void registerWorker(RPCAddress addr, int id) {
-        workerMap.put(id,new workerInfo(addr, id));
+    //demo
+    synchronized private int getNewWorkerId() {
+        return ++curWorkerId;
+    }
+
+    synchronized int registerWorker(RPCAddress addr) {
+        Integer id = addressMap.get(addr.toString());
+        if (id!=null) {
+            System.out.println("WorkerMan:Re register worker:"+id);
+            keepAliveWorker(id);
+            return id;
+        }
+        int newId = getNewWorkerId();
+        workerMap.put(newId,new workerInfo(addr, newId));
+        addressMap.put(addr.toString(),newId);
+        return newId;
     }
 
     synchronized void keepAliveWorker(int id) {
@@ -68,7 +85,8 @@ public class WorkerManager {
         workerMap.forEach((i,j)->{
             if (j.isAlive) {
                 try {
-                    HaltWorkerReply reply = j.cli.haltWorker(1);
+                    HaltWorkerReply reply = (HaltWorkerReply)
+                            j.cli.call("haltWorker",HaltWorkerRequest.newBuilder().setReason(1).build());
                     if (reply!=null) System.out.println("WorkerMan: worker halted: id:"+i);
                     j.cli.shutdown();
                 } catch (InterruptedException ignored){}

@@ -3,6 +3,7 @@ package org.acm.reducemap.master;
 import org.acm.reducemap.common.RPCAddress;
 import org.acm.reducemap.common.RPCConfig;
 import org.acm.reducemap.worker.AssignWorkReply;
+import org.acm.reducemap.worker.AssignWorkRequest;
 
 import java.io.IOException;
 import java.util.Random;
@@ -15,23 +16,15 @@ public class Master {
     private MasterRPCServer server;
     private WorkerManager workerMan = new WorkerManager();
 
-    private int curWorkerId = 0; //demo
-
     private Master(int port) {
         server = new MasterRPCServer(this,logger,port);
-    }
-
-    //demo
-    synchronized private int getCurWorkerId() {
-        return ++curWorkerId;
     }
 
     //implementation begins here
     // on receiving worker RPC calls
     void onRegister(RegisterReply.Builder reply, RegisterRequest req) {
         logger.info("recvReq Register ip:"+req.getIpAddress()+" port:"+req.getPort());
-        int id = getCurWorkerId();
-        workerMan.registerWorker(new RPCAddress(req.getIpAddress(),req.getPort()), id);
+        int id = workerMan.registerWorker(new RPCAddress(req.getIpAddress(),req.getPort()));
         reply.setWorkerId(id);
     }
 
@@ -54,8 +47,19 @@ public class Master {
                 WorkerManager.workerInfo info = avail.get(idx);
 //              System.out.println("info:"+info.workerId);
                 MasterRPCClient rpc = info.cli; // or rpc = workerMan.getWorkerRPC(info.workerId)
-                AssignWorkReply reply = rpc.assignWork(i%5,i); //demo
-                if (reply==null) continue;
+
+//                AssignWorkReply reply = rpc.assignWork(i%5,i); //demo
+
+                AssignWorkReply reply = (AssignWorkReply)
+                        rpc.call("assignWork",AssignWorkRequest.newBuilder().setWorkId(i).setWorkType(i%5).build());
+
+                if (reply==null) {
+                    logger.warning("worker down, retrying in 1s");
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ignored) {}
+                    continue;
+                }
                 int status = reply.getStatus();
                 System.out.println("get worker status:"+status);
                 break;

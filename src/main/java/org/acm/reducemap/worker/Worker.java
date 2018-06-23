@@ -1,14 +1,40 @@
 package org.acm.reducemap.worker;
 
 import org.acm.reducemap.common.RPCConfig;
+import org.acm.reducemap.master.HeartbeatReply;
+import org.acm.reducemap.master.HeartbeatRequest;
 import org.acm.reducemap.master.RegisterReply;
+import org.acm.reducemap.master.RegisterRequest;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.logging.Logger;
 
 public class Worker {
+    class HeartbeatThread implements Runnable {
+        @Override
+        public void run() {
+            HeartbeatReply reply = null;
+            while (isRunning) {
+                int sleepTime = 10000;
+                try {
+                    Thread.sleep(sleepTime);
+                } catch (InterruptedException ignored) {}
+                System.out.println("sending heartbeat");
+                reply = (HeartbeatReply)
+                        client.call("heartbeat",HeartbeatRequest.newBuilder().
+                                setWorkerId(workerId).
+                                setTimestamp((int)System.currentTimeMillis()/1000).build());
+                if (reply!=null) continue;
+                logger.warning("heartbeat: master down, retrying...");
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException ignored) {}
+            }
+        }
+    }
 
+    private boolean isRunning;
     private int workerId;
     private int localPort;
     private WorkerRPCServer server;
@@ -38,6 +64,7 @@ public class Worker {
         logger.info("recvReq Halt");
         reply.setStatus(0);
         server.stop();
+        isRunning = false;
     }
 
     //on RPC call reply
@@ -51,13 +78,22 @@ public class Worker {
 //        String t = RPCConfig.getLocalIpAddr();
         logger.info("worker started localhost:"+t);
         server.start();
+        isRunning = true;
 
-        RegisterReply reply;
-        while ((reply=client.register(t,localPort))==null) {
-            logger.warning("master down, reconnecting in 3s...");
-            Thread.sleep(3000);
+        RegisterReply reply = null;
+        while (true) {
+            reply = (RegisterReply) client.call("register",RegisterRequest.newBuilder().setIpAddress(t).setPort(localPort).build());
+            if (reply!=null) break;
+            logger.warning("master down, reconnecting...");
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException ignored) {}
         }
         onReplyRegister(reply);
+
+        Thread hbThread = new Thread(new HeartbeatThread());
+
+        hbThread.start();
 
         server.blockUntilShutdown();
         client.shutdown();

@@ -14,6 +14,10 @@ public class RPCAddress {
         return sb;
     }
 
+    public RPCAddress() {
+
+    }
+
     public RPCAddress(String addr) {
         String[] str = addr.split(":");
         if (str.length!=2) return;
@@ -23,11 +27,6 @@ public class RPCAddress {
 
     public RPCAddress(int ipAddr, int p) {
         hostname = toHostname(ipAddr);
-        port = p;
-    }
-
-    public RPCAddress(String ipAddr, int p) {
-        hostname = ipAddr;
         port = p;
     }
 

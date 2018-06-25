@@ -19,7 +19,6 @@ service Master {
 // register request message to master
 message RegisterRequest {
     string ip_address = 1;
-    int32 port = 2;
 }
 
 // register reply message to worker
@@ -30,7 +29,9 @@ message RegisterReply {
 // heartbeat request message to master
 message HeartbeatRequest {
     int32 worker_id = 1;
-    int32 timestamp = 2;
+//    int32 timestamp = 2;
+    int32 status = 3;
+    string ip_address = 4;
 }
 
 // heartbeat reply message to worker

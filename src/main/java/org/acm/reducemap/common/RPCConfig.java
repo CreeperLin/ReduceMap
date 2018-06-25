@@ -9,8 +9,15 @@ public class RPCConfig {
 
     public static int masterPort = 50051;
     public static int workerPort = 50052;
-    public static String masterAddress = "localhost";
-    public static String workerAddress = "localhost";
+
+    public static long workerRegisterRetryInterval = 3000;
+    public static long workerHeartbeatInterval = 5000;
+    public static long workerHeartbeatRetryInterval = 3000;
+    public static long workerDeadTimeout = 15000;
+    public static long workerOverdueTimeout = 3000;
+
+    public static long masterBackgroundInterval = 3000;
+    public static long masterScheduleRetryInterval = 500;
 
     public static String getLocalIpAddr() throws SocketException {
         String ip="";

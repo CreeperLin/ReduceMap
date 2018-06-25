@@ -11,24 +11,25 @@ import java.net.InetAddress;
 import java.util.logging.Logger;
 
 public class Worker {
+    // send heartbeat
     class HeartbeatThread implements Runnable {
         @Override
         public void run() {
             HeartbeatReply reply;
             while (isRunning) {
-                int sleepTime = 10000;
                 try {
-                    Thread.sleep(sleepTime);
+                    Thread.sleep(RPCConfig.workerHeartbeatInterval);
                 } catch (InterruptedException ignored) {}
                 System.out.println("sending heartbeat");
                 reply = (HeartbeatReply)
                         client.call("heartbeat",HeartbeatRequest.newBuilder().
                                 setWorkerId(workerId).
-                                setTimestamp((int)System.currentTimeMillis()/1000).build());
+                                setIpAddress(localAddress).
+                                setStatus(1).build());
                 if (reply!=null) continue;
                 logger.warning("heartbeat: master down, retrying...");
                 try {
-                    Thread.sleep(3000);
+                    Thread.sleep(RPCConfig.workerHeartbeatRetryInterval);
                 } catch (InterruptedException ignored) {}
             }
         }
@@ -36,12 +37,11 @@ public class Worker {
 
     private boolean isRunning;
     private int workerId;
+    private String localAddress;
     private int localPort;
     private WorkerRPCServer server;
     private WorkerRPCClient client;
     private static final Logger logger = Logger.getLogger(Worker.class.getName());
-
-    private int curStatus = 0; // demo
 
     private Worker(int port, String masterAddr, int masterPort) {
         localPort = port;
@@ -53,8 +53,8 @@ public class Worker {
     //on receiving RPC calls
     void onAssignWork(AssignWorkReply.Builder reply, AssignWorkRequest req) {
         logger.info("recvReq AssignWork: workId:"+req.getWorkId()+" workType:"+req.getWorkType());
-        work(req.getWorkId());
-        reply.setWorkerId(workerId).setStatus(++curStatus);
+        int ret = work(req.getWorkId());
+        reply.setWorkerId(workerId).setStatus(ret);
     }
 
     void onHaltWorker(HaltWorkerReply.Builder reply, HaltWorkerRequest req) {
@@ -70,28 +70,29 @@ public class Worker {
         workerId = reply.getWorkerId();
     }
 
-    private void work(int workId) {
+    private int work(int workId) {
         System.out.println("do Work:"+workId);
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ignored) {}
         System.out.println("done:"+workId);
+        return workId * workId; //demo
     }
 
     private void run() throws IOException, InterruptedException {
-        String t = InetAddress.getLocalHost().getHostAddress();
-//        String t = RPCConfig.getLocalIpAddr();
-        logger.info("worker started localhost:"+t);
+        localAddress = InetAddress.getLocalHost().getHostAddress()+":"+localPort;
+//        String localAddress = RPCConfig.getLocalIpAddr(); // real local ip address
+        logger.info("worker started localhost:"+localAddress);
         server.start();
         isRunning = true;
 
         RegisterReply reply;
         while (true) {
-            reply = (RegisterReply) client.call("register",RegisterRequest.newBuilder().setIpAddress(t).setPort(localPort).build());
+            reply = (RegisterReply) client.call("register",RegisterRequest.newBuilder().setIpAddress(localAddress).build());
             if (reply!=null) break;
             logger.warning("master down, reconnecting...");
             try {
-                Thread.sleep(3000);
+                Thread.sleep(RPCConfig.workerRegisterRetryInterval);
             } catch (InterruptedException ignored) {}
         }
         onReplyRegister(reply);

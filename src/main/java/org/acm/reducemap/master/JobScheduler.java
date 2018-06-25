@@ -2,6 +2,7 @@ package org.acm.reducemap.master;
 
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import org.acm.reducemap.common.RPCConfig;
 import org.acm.reducemap.worker.AssignWorkReply;
 import org.acm.reducemap.worker.AssignWorkRequest;
 
@@ -17,6 +18,8 @@ class JobScheduler {
     private Logger logger;
     private ArrayDeque<Integer> jobQueue = new ArrayDeque<>();
 
+    private int result = 0; //demo
+
     JobScheduler(Master mas, Logger log) {
         master = mas;
         logger = log;
@@ -26,22 +29,37 @@ class JobScheduler {
         int status = reply.getStatus();
         int workerId = reply.getWorkerId();
         System.out.println("get AssignWork reply id:"+workerId+" status:"+status);
+        result += status;
         master.workerMan.freeWorker(workerId);
+    }
+
+    private boolean isAllComplete() {
+        return false;
+    }
+
+    synchronized void addJob(int jobId) {
+        jobQueue.add(jobId);
+    }
+
+    private synchronized int getJob() {
+        if (jobQueue.isEmpty()) return 0;
+        return jobQueue.pop();
     }
 
     void schedule() throws InterruptedException{
         int t = 100;
         for (int i = 1;i<=t;++i) jobQueue.add(i);
 
-        while (!jobQueue.isEmpty()){
-            int jobId = jobQueue.pop();
+        int jobId;
+        while ((jobId=getJob())!=0){
             logger.info("Schedule:AssignWork:"+jobId);
             Vector<WorkerManager.workerInfo> avail = new Vector<>();
             while (true) {
                 while (true){
                     master.workerMan.getAvailableWorkers(avail);
                     if (!avail.isEmpty()) break;
-                    Thread.sleep(500);
+                    System.out.println("no worker available, retrying...");
+                    Thread.sleep(RPCConfig.masterScheduleRetryInterval);
                 }
                 int idx = new Random().nextInt(avail.size());
                 WorkerManager.workerInfo info = avail.get(idx);
@@ -65,7 +83,7 @@ class JobScheduler {
 
                     @Override
                     public void onError(Throwable t) {
-                        logger.log(Level.WARNING,"RecordRoute Failed: {0}", ((StatusRuntimeException)t).getStatus());
+                        logger.log(Level.WARNING,"Assign work Failed: {0}", ((StatusRuntimeException)t).getStatus());
                     }
 
                     @Override
@@ -75,13 +93,12 @@ class JobScheduler {
                         AssignWorkRequest.newBuilder().setWorkId(jobId).setWorkType(jobId % 5).build(),replyObserver);
 
                 if (!succ) {
-                    logger.warning("worker down, retrying in 1s");
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException ignored) {}
+                    logger.warning("worker down, retrying");
+                    Thread.sleep(RPCConfig.masterScheduleRetryInterval);
                     continue;
                 }
-                master.workerMan.busyWorker(workerId);
+                System.out.println("assigned: worker:"+workerId+" job:"+jobId);
+                master.workerMan.busyWorker(workerId, jobId);
                 break;
             }
         }

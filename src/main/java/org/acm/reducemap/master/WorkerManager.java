@@ -1,6 +1,7 @@
 package org.acm.reducemap.master;
 
 import org.acm.reducemap.common.RPCAddress;
+import org.acm.reducemap.common.RPCConfig;
 import org.acm.reducemap.worker.HaltWorkerReply;
 import org.acm.reducemap.worker.HaltWorkerRequest;
 
@@ -14,16 +15,22 @@ public class WorkerManager {
         boolean isAlive;
         boolean isBusy;
         int workerId;
+        int curWorkId;
         long lastAlive;
+        long lastAssigned;
         MasterRPCClient cli;
 
         workerInfo(RPCAddress addr, int id) {
             isAlive = true;
             workerId = id;
-            lastAlive = System.currentTimeMillis()/1000;
+            lastAlive = System.currentTimeMillis();
             cli = new MasterRPCClient(addr.hostname,addr.port);
         }
 
+        @Override
+        public String toString() {
+            return "(Id:" + workerId + " alive:" + isAlive + " busy:" + isBusy + " workId:" + curWorkId + " lastAlive:" + lastAlive + " lastAssign:" + lastAssigned + ")";
+        }
     }
 
     private int curWorkerId = 0; //demo
@@ -35,23 +42,28 @@ public class WorkerManager {
         return ++curWorkerId;
     }
 
-    synchronized int registerWorker(RPCAddress addr) {
-        Integer id = addressMap.get(addr.toString());
+    synchronized int registerWorker(String ipAddr) {
+        Integer id = addressMap.get(ipAddr);
         if (id!=null) {
             System.out.println("WorkerMan:Re register worker:"+id);
-            keepAliveWorker(id);
+            keepAliveWorker(id, ipAddr);
             return id;
         }
         int newId = getNewWorkerId();
-        workerMap.put(newId,new workerInfo(addr, newId));
-        addressMap.put(addr.toString(),newId);
+        workerMap.put(newId,new workerInfo(new RPCAddress(ipAddr), newId));
+        addressMap.put(ipAddr,newId);
         return newId;
     }
 
-    synchronized void keepAliveWorker(int id) {
+    synchronized void keepAliveWorker(int id, String ipAddr) {
         workerInfo wk = workerMap.get(id);
-        if (wk == null) return;
-        wk.lastAlive = System.currentTimeMillis()/1000;
+        if (wk == null) {
+            System.out.println("WorkerMan:rediscover worker:"+id);
+            wk = new workerInfo(new RPCAddress(ipAddr), id);
+            workerMap.put(id,wk);
+            addressMap.put(ipAddr, id);
+        }
+        wk.lastAlive = System.currentTimeMillis();
         wk.isAlive = true;
     }
 
@@ -67,17 +79,20 @@ public class WorkerManager {
         wk.isAlive = true;
     }
 
-    synchronized void busyWorker(int id) {
-        workerInfo wk = workerMap.get(id);
+    synchronized void busyWorker(int workerId, int jobId) {
+        workerInfo wk = workerMap.get(workerId);
         if (wk == null || !wk.isAlive) return;
         wk.isBusy = true;
-        System.out.println("busy worker:"+id);
+        wk.curWorkId = jobId;
+        wk.lastAssigned = System.currentTimeMillis();
+        System.out.println("busy worker:"+workerId);
     }
 
     synchronized void freeWorker(int id) {
         workerInfo wk = workerMap.get(id);
         if (wk == null || !wk.isAlive) return;
         wk.isBusy = false;
+        wk.curWorkId = 0;
         System.out.println("freed worker:"+id);
     }
 
@@ -99,13 +114,40 @@ public class WorkerManager {
         });
     }
 
+    synchronized Vector<workerInfo> getDeadWorkers() {
+        Vector<workerInfo> ret = new Vector<>();
+        long curTime = System.currentTimeMillis();
+        workerMap.forEach((i,j)->{
+            if (!j.isAlive) {
+                ret.add(j);
+            } else if (curTime-j.lastAlive>RPCConfig.workerDeadTimeout) {
+                j.isAlive = false;
+                ret.add(j);
+            }
+        });
+        return ret;
+    }
+
+    synchronized Vector<workerInfo> getOverdueWorkers() {
+        Vector<workerInfo> ret = new Vector<>();
+        long curTime = System.currentTimeMillis();
+        workerMap.forEach((i,j)->{
+//            System.out.println("workerInfo:"+j);
+            if (j.isAlive && j.isBusy && (curTime-j.lastAssigned)>RPCConfig.workerOverdueTimeout) {
+                ret.add(j);
+//                System.out.println("add:"+i);
+            }
+        });
+        return ret;
+    }
+
     synchronized MasterRPCClient getWorkerRPC(int id) {
         workerInfo wk = workerMap.get(id);
         if (wk == null) return null;
         return wk.cli;
     }
 
-    void haltAllWorker() {
+    synchronized void haltAllWorker() {
         workerMap.forEach((i,j)->{
             if (j.isAlive) {
                 try {

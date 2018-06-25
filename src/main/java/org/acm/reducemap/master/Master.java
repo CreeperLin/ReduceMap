@@ -1,6 +1,5 @@
 package org.acm.reducemap.master;
 
-import org.acm.reducemap.common.RPCAddress;
 import org.acm.reducemap.common.RPCConfig;
 
 import java.io.IOException;
@@ -58,7 +57,7 @@ public class Master {
     }
 
     // on Completing all tasks
-    private void onComplete() {
+    void onComplete() {
         logger.info("All task complete, stopping");
         stop();
     }
@@ -69,7 +68,6 @@ public class Master {
         Thread bgThread = new Thread(new BackgroundActivity());
         bgThread.start();
         jobScheduler.schedule();
-        onComplete();
         server.blockUntilShutdown();
     }
 

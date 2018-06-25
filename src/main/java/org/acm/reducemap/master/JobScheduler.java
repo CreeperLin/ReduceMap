@@ -7,6 +7,7 @@ import org.acm.reducemap.worker.AssignWorkReply;
 import org.acm.reducemap.worker.AssignWorkRequest;
 
 import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -17,6 +18,7 @@ class JobScheduler {
     private Master master;
     private Logger logger;
     private ArrayDeque<Integer> jobQueue = new ArrayDeque<>();
+    private HashMap<Integer,Boolean> compMap = new HashMap<>();
 
     private int result = 0; //demo
 
@@ -25,16 +27,20 @@ class JobScheduler {
         logger = log;
     }
 
-    private void onJobComplete(AssignWorkReply reply) {
+    private void onJobComplete(int workerId, int jobId, AssignWorkReply reply) {
         int status = reply.getStatus();
-        int workerId = reply.getWorkerId();
         System.out.println("get AssignWork reply id:"+workerId+" status:"+status);
         result += status;
         master.workerMan.freeWorker(workerId);
+        compMap.put(jobId,true);
+        if (isAllComplete()) {
+            System.out.println("complete:"+result); //338350
+            master.onComplete();
+        }
     }
 
     private boolean isAllComplete() {
-        return false;
+        return compMap.size() == 100;
     }
 
     synchronized void addJob(int jobId) {
@@ -75,10 +81,14 @@ class JobScheduler {
 //                succ = (reply != null);
 
                 // async call demo
+                int finalJobId = jobId;
                 StreamObserver<AssignWorkReply> replyObserver = new StreamObserver<AssignWorkReply>() {
+                    int wid = workerId;
+                    int jid = finalJobId;
+
                     @Override
                     public void onNext(AssignWorkReply value) {
-                        onJobComplete(value);
+                        onJobComplete(wid, jid, value);
                     }
 
                     @Override
@@ -92,7 +102,7 @@ class JobScheduler {
                 succ = rpc.asyncCall("assignWork",
                         AssignWorkRequest.newBuilder().setWorkId(jobId).setWorkType(jobId % 5).build(),replyObserver);
 
-                if (!succ) {
+                if (!succ) { //not working in async call?
                     logger.warning("worker down, retrying");
                     Thread.sleep(RPCConfig.masterScheduleRetryInterval);
                     continue;

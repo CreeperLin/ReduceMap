@@ -54,7 +54,7 @@ public class Worker {
     void onAssignWork(AssignWorkReply.Builder reply, AssignWorkRequest req) {
         logger.info("recvReq AssignWork: workId:"+req.getWorkId()+" workType:"+req.getWorkType());
         int ret = work(req.getWorkId());
-        reply.setWorkerId(workerId).setStatus(ret);
+        reply.setStatus(ret);
     }
 
     void onHaltWorker(HaltWorkerReply.Builder reply, HaltWorkerRequest req) {
@@ -73,7 +73,7 @@ public class Worker {
     private int work(int workId) {
         System.out.println("do Work:"+workId);
         try {
-            Thread.sleep(1000);
+            Thread.sleep(500);
         } catch (InterruptedException ignored) {}
         System.out.println("done:"+workId);
         return workId * workId; //demo

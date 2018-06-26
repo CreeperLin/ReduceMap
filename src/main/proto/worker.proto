@@ -20,10 +20,12 @@ service Worker {
 message AssignWorkRequest {
     int32 work_type = 1;
     int32 work_id = 2;
+    string param_handle = 3; // json?
 }
 
 message AssignWorkReply {
     int32 status = 1;
+    string result_handle = 2;
 }
 
 message HaltWorkerRequest {

@@ -66,5 +66,21 @@ public class MasterRPCServer {
             responseObserver.onNext(reply.build());
             responseObserver.onCompleted();
         }
+
+        @Override
+        public void newWork(NewWorkRequest request, StreamObserver<NewWorkReply> responseObserver) {
+            NewWorkReply.Builder reply = NewWorkReply.newBuilder();
+            master.onNewWork(reply,request);
+            responseObserver.onNext(reply.build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void execute(ExecuteRequest request, StreamObserver<ExecuteReply> responseObserver) {
+            ExecuteReply.Builder reply = ExecuteReply.newBuilder();
+            master.onExecute(reply,request);
+            responseObserver.onNext(reply.build());
+            responseObserver.onCompleted();
+        }
     }
 }

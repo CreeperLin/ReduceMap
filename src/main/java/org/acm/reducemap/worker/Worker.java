@@ -8,6 +8,7 @@ import org.acm.reducemap.master.RegisterRequest;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 public class Worker {
@@ -39,23 +40,34 @@ public class Worker {
     private int workerId;
     private String localAddress;
     private int localPort;
-    private int curWorkType = 0;
+    private HashMap<Integer,String> workDescMap = new HashMap<>();
 
     private WorkerRPCServer server;
     private WorkerRPCClient client;
+    private JyExecutor exec;
     private static final Logger logger = Logger.getLogger(Worker.class.getName());
 
     private Worker(int port, String masterAddr, int masterPort) {
         localPort = port;
         server = new WorkerRPCServer(this,logger,port);
         client = new WorkerRPCClient(masterAddr,masterPort);
+        exec = new JyExecutor();
     }
 
     //implementation begins here
     //on receiving RPC calls
     void onAssignWork(AssignWorkReply.Builder reply, AssignWorkRequest req) {
-        logger.info("recvReq AssignWork: workId:"+req.getWorkId()+" workType:"+req.getWorkType());
-        int ret = work(req.getWorkId());
+        int workId = req.getWorkId(), workType = req.getWorkType();
+        logger.info("recvReq AssignWork: workId:"+workId+" workType:"+workType);
+        System.out.println("do Work:"+workId);
+        String src = workDescMap.get(workId);
+        if (src == null) {
+            logger.warning("Work description not exist");
+            reply.setStatus(-1);
+            return;
+        }
+        int ret = exec.run(src,req.getParamHandle());
+        System.out.println("done:"+workId+" ret:"+ret);
         reply.setStatus(ret);
     }
 
@@ -68,21 +80,14 @@ public class Worker {
 
     void onDescWork(DescWorkReply.Builder reply, DescWorkRequest req) {
         logger.info("recvReq DescWork:"+req.getWorkType());
+        workDescMap.put(req.getWorkType(),req.getExec());
+        reply.setStatus(0);
     }
 
     //on RPC call reply
     private void onReplyRegister(RegisterReply reply) {
         logger.info("get WorkerId: " + reply.getWorkerId());
         workerId = reply.getWorkerId();
-    }
-
-    private int work(int workId) {
-        System.out.println("do Work:"+workId);
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException ignored) {}
-        System.out.println("done:"+workId);
-        return workId * workId; //demo
     }
 
     private void run() throws IOException, InterruptedException {

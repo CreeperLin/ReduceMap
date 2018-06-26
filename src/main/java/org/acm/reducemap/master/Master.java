@@ -3,6 +3,7 @@ package org.acm.reducemap.master;
 import org.acm.reducemap.common.RPCConfig;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Vector;
 import java.util.logging.Logger;
 
@@ -37,12 +38,18 @@ public class Master {
     private MasterRPCServer server;
     WorkerManager workerMan = new WorkerManager();
     private JobScheduler jobScheduler = new JobScheduler(this,logger);
+    private int curWorkType = 0;
+    private HashMap<Integer,String> workDescMap = new HashMap<>();
 
     private Master(int port) {
         server = new MasterRPCServer(this,logger,port);
     }
 
     //implementation begins here
+    private int getNewWorkType() {
+        return ++curWorkType;
+    }
+
     // on receiving worker RPC calls
     void onRegister(RegisterReply.Builder reply, RegisterRequest req) {
         logger.info("recvReq Register ip:"+req.getIpAddress());
@@ -58,11 +65,15 @@ public class Master {
 
     // client calls
     void onNewWork(NewWorkReply.Builder reply, NewWorkRequest req) {
-
+        int wt = getNewWorkType();
+        String exec = req.getExecHandle();
+        workDescMap.put(wt,exec);
+        reply.setWorkType(wt);
     }
 
     void onExecute(ExecuteReply.Builder reply, ExecuteRequest req) {
-
+        int wt = req.getWorkType();
+        reply.setStatus(0);
     }
 
     // on Completing all tasks

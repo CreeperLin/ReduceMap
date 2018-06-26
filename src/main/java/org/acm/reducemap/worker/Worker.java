@@ -39,6 +39,8 @@ public class Worker {
     private int workerId;
     private String localAddress;
     private int localPort;
+    private int curWorkType = 0;
+
     private WorkerRPCServer server;
     private WorkerRPCClient client;
     private static final Logger logger = Logger.getLogger(Worker.class.getName());
@@ -62,6 +64,10 @@ public class Worker {
         reply.setStatus(0);
         server.stop();
         isRunning = false;
+    }
+
+    void onDescWork(DescWorkReply.Builder reply, DescWorkRequest req) {
+        logger.info("recvReq DescWork:"+req.getWorkType());
     }
 
     //on RPC call reply

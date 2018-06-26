@@ -4,7 +4,7 @@ MapReduce in Java
 ## Introduction
 MapReduce in Java, with basic master and worker implementation.
 
-[Paper](http://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf)
+[MapReduce Paper](http://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf)
 ## Project Structure
 ### RPC Framework
 Use [grpc](http://grpc.io) as RPC framework.

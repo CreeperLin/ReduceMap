@@ -14,7 +14,7 @@ service Worker {
     // master stop worker
     rpc HaltWorker(HaltWorkerRequest) returns (HaltWorkerReply) {}
     // master send work description to worker (python)
-//    rpc DescWork (DescWorkRequest) returns (DescWorkReply) {}
+    rpc DescWork (DescWorkRequest) returns (DescWorkReply) {}
 }
 
 message AssignWorkRequest {
@@ -31,5 +31,14 @@ message HaltWorkerRequest {
 }
 
 message HaltWorkerReply {
+    int32 status = 1;
+}
+
+message DescWorkRequest {
+    int32 work_type = 1;
+    string exec = 2;
+}
+
+message DescWorkReply {
     int32 status = 1;
 }

@@ -63,5 +63,13 @@ class WorkerRPCServer {
             responseObserver.onNext(reply.build());
             responseObserver.onCompleted();
         }
+
+        @Override
+        public void descWork(DescWorkRequest request, StreamObserver<DescWorkReply> responseObserver) {
+            DescWorkReply.Builder reply = DescWorkReply.newBuilder();
+            worker.onDescWork(reply,request);
+            responseObserver.onNext(reply.build());
+            responseObserver.onCompleted();
+        }
     }
 }

@@ -56,6 +56,15 @@ public class Master {
         reply.setStatus(1);
     }
 
+    // client calls
+    void onNewWork(NewWorkReply.Builder reply, NewWorkRequest req) {
+
+    }
+
+    void onExecute(ExecuteReply.Builder reply, ExecuteRequest req) {
+
+    }
+
     // on Completing all tasks
     void onComplete() {
         logger.info("All task complete, stopping");

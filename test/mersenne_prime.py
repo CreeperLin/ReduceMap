@@ -11,8 +11,13 @@ def lucas_lehmer(p):
     return False
 
 def run(a,b):
+    global output_name
+    f = open(output_name,'w')
+    print output_name
     for p in range(a,b+1):
         # if miller_rabin(p):
         if lucas_lehmer(p):
-            print('p = ', p, '  n = ', 2 ** p - 1, '\n')
+            print('p = '+str(p)+'  n = '+str(2 ** p - 1))
+            f.write('p = '+str(p)+'  n = '+str(2 ** p - 1)+'\n')
+    f.close()
     return 0

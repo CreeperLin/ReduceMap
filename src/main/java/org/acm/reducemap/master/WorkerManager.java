@@ -15,7 +15,7 @@ public class WorkerManager {
         boolean isAlive;
         boolean isBusy;
         int workerId;
-        int curWorkId;
+        JobScheduler.JobType curJob;
         long lastAlive;
         long lastAssigned;
         MasterRPCClient cli;
@@ -29,7 +29,7 @@ public class WorkerManager {
 
         @Override
         public String toString() {
-            return "(Id:" + workerId + " alive:" + isAlive + " busy:" + isBusy + " workId:" + curWorkId + " lastAlive:" + lastAlive + " lastAssign:" + lastAssigned + ")";
+            return "(Id:" + workerId + " alive:" + isAlive + " busy:" + isBusy + " workId:" + curJob.getNum() + " lastAlive:" + lastAlive + " lastAssign:" + lastAssigned + ")";
         }
     }
 
@@ -79,11 +79,11 @@ public class WorkerManager {
         wk.isAlive = true;
     }
 
-    synchronized void busyWorker(int workerId, int jobId) {
+    synchronized void busyWorker(int workerId, JobScheduler.JobType job) {
         workerInfo wk = workerMap.get(workerId);
         if (wk == null || !wk.isAlive) return;
         wk.isBusy = true;
-        wk.curWorkId = jobId;
+        wk.curJob = job;
         wk.lastAssigned = System.currentTimeMillis();
         System.out.println("busy worker:"+workerId);
     }
@@ -92,7 +92,7 @@ public class WorkerManager {
         workerInfo wk = workerMap.get(id);
         if (wk == null || !wk.isAlive) return;
         wk.isBusy = false;
-        wk.curWorkId = 0;
+        wk.curJob = null;
         System.out.println("freed worker:"+id);
     }
 

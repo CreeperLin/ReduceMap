@@ -1,9 +1,12 @@
 package org.acm.reducemap.master;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.acm.reducemap.common.RPCConfig;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Logger;
 
@@ -24,9 +27,9 @@ public class Master {
                 for (WorkerManager.workerInfo i : retireWorker) {
                     if (!i.isBusy) continue;
                     i.isBusy = false;
-                    System.out.println("job reschedule: worker:"+i.workerId+" jobId:"+i.curWorkId);
-                    jobScheduler.addJob(i.curWorkId);
-                    i.curWorkId = 0;
+                    System.out.println("job reschedule: worker:"+i.workerId+" jobId:"+i.curJob.getNum());
+                    jobScheduler.addJob(i.curJob);
+                    i.curJob = null;
                     i.lastAssigned = 0;
                 }
             }
@@ -73,10 +76,21 @@ public class Master {
     }
 
     void onExecute(ExecuteReply.Builder reply, ExecuteRequest req) {
+        int counter = 1;
         int wt = req.getWorkType();
         String param = req.getParamHandle();
+        JsonParser parser = new JsonParser();
+        JsonObject jb = (JsonObject) parser.parse(param);
+        Set<String> keySet = jb.keySet();
+        int lowbound = jb.get("a").getAsInt();
+        int upbound = jb.get("b").getAsInt();
+        JsonObject json = new JsonObject();
+        json.addProperty("a",lowbound);
+        json.addProperty("b",upbound);
+        String para = json.toString();
+        JobScheduler.JobType job = jobScheduler.new JobType(wt, counter, para);
+        jobScheduler.addJob(job);
 
-        jobScheduler.addJob(1);
         reply.setStatus(0);
     }
 

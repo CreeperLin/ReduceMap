@@ -17,11 +17,24 @@ class JobScheduler {
 
     private Master master;
     private Logger logger;
-    private ArrayDeque<Integer> jobQueue = new ArrayDeque<>();
+    private ArrayDeque<JobType> jobQueue = new ArrayDeque<>();
     private HashMap<Integer,Boolean> compMap = new HashMap<>();
 
     private int result = 0; //demo
 
+    public class JobType {
+        private int SerialNum;
+        private String para;
+        private int WorkType;
+        JobType(int wt, int x, String p){
+            WorkType = wt;
+            SerialNum = x;
+            para = p;
+        }
+        int getNum(){
+            return SerialNum;
+        }
+    }
     JobScheduler(Master mas, Logger log) {
         master = mas;
         logger = log;
@@ -43,22 +56,23 @@ class JobScheduler {
         return compMap.size() == 100;
     }
 
-    synchronized void addJob(int jobId) {
-        jobQueue.add(jobId);
+    synchronized void addJob(JobType job) {
+        jobQueue.add(job);
     }
 
-    private synchronized int getJob() {
-        if (jobQueue.isEmpty()) return 0;
+    private synchronized JobType getJob() {
+        if (jobQueue.isEmpty()) return null;
         return jobQueue.pop();
     }
 
     void schedule() throws InterruptedException{
-        int t = 100;
-        for (int i = 1;i<=t;++i) jobQueue.add(i);
+//        int t = 100;
+//        for (int i = 1;i<=t;++i) jobQueue.add(i);
 
-        int jobId;
-        while ((jobId=getJob())!=0){
-            logger.info("Schedule:AssignWork:"+jobId);
+        JobType job;
+        while ((job = getJob())!= null){
+            int jobId = job.SerialNum;
+            logger.info("Schedule:AssignWork:"+job.SerialNum);
             Vector<WorkerManager.workerInfo> avail = new Vector<>();
             while (true) {
                 while (true){
@@ -100,7 +114,7 @@ class JobScheduler {
                     public void onCompleted() {}
                 };
                 succ = rpc.asyncCall("assignWork",
-                        AssignWorkRequest.newBuilder().setWorkId(jobId).setWorkType(jobId % 5).build(),replyObserver);
+                        AssignWorkRequest.newBuilder().setWorkId(jobId).setWorkType(job.WorkType).setParamHandle(job.para).build(),replyObserver);
 
                 if (!succ) { //not working in async call?
                     logger.warning("worker down, retrying");
@@ -108,7 +122,7 @@ class JobScheduler {
                     continue;
                 }
                 System.out.println("assigned: worker:"+workerId+" job:"+jobId);
-                master.workerMan.busyWorker(workerId, jobId);
+                master.workerMan.busyWorker(workerId, job);
                 break;
             }
         }

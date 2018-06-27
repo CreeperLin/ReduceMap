@@ -5,12 +5,12 @@ import com.google.gson.JsonParser;
 import org.acm.reducemap.common.RPCConfig;
 import org.acm.reducemap.worker.DescWorkReply;
 import org.acm.reducemap.worker.DescWorkRequest;
-import org.python.modules.math;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Vector;
@@ -109,14 +109,29 @@ public class Master {
         reply.setWorkType(wt);
     }
 
+    private void naiveQueue(int wt, long lo, long hi) {
+        long tot = hi/100, amt = hi*hi*hi*hi, samt = amt/tot, curlo = lo;
+        for (int i=1;i<=tot && curlo<hi;++i) {
+            long curhi = curlo + 1;
+            while (curhi<hi && (curhi*curhi*curhi*curhi)-(curlo*curlo*curlo*curlo)<samt) {
+                ++curhi;
+            }
+            JsonObject json = new JsonObject();
+            json.addProperty("a",curlo);
+            json.addProperty("b",curhi);
+            jobScheduler.addJob(jobScheduler.new JobType(wt, i, json.toString()));
+            curlo = curhi + 1;
+        }
+    }
+
     private void queue(int wt, int lowbound, int upbound) {
         int counter = 1;
-        for (int i = (int)math.pow(lowbound - 1, 3) ; i <= (int)math.pow(upbound, 3); i = i + 1000*1000*1000){
+        for (int i = (int)Math.pow(lowbound - 1, 3) ; i <= (int)Math.pow(upbound, 3); i = i + 1000*1000*1000){
             JsonObject json = new JsonObject();
-            int aa = (int)math.floor(math.pow(i, 1.0/3)) + 1;
+            int aa = (int)Math.floor(Math.pow(i, 1.0/3)) + 1;
             json.addProperty("a",aa);
-            if(i + 1000 * 1000 * 1000 <= (int)math.pow(upbound, 3)){
-                int bb = (int)math.floor(math.pow(i + 1000 * 1000 * 1000, 1.0/3));
+            if(i + 1000 * 1000 * 1000 <= (int)Math.pow(upbound, 3)){
+                int bb = (int)Math.floor(Math.pow(i + 1000 * 1000 * 1000, 1.0/3));
                 json.addProperty("b",bb);
             }
             else {
@@ -139,7 +154,7 @@ public class Master {
         Set<String> keySet = jb.keySet();
         int lowbound = jb.get("a").getAsInt();
         int upbound = jb.get("b").getAsInt();
-        queue(wt,lowbound,upbound);
+        naiveQueue(wt,lowbound,upbound);
         try {
             jobScheduler.schedule();
         } catch (InterruptedException ignored) {}

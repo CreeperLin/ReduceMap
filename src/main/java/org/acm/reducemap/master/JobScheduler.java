@@ -58,7 +58,7 @@ class JobScheduler {
         int workerId = req.getWorkerId();
         int jobId = req.getJobId();
         int jobType = req.getJobType();
-        System.out.println("get JobComplete: workerId:" + workerId + "jobId:" + jobId + " status:" + status);
+        System.out.println("get JobComplete: workerId:" + workerId + " jobId:" + jobId + " status:" + status);
         compMap.put(jobId, new AssignType(jobId, jobType, workerId,req.getResultHandle()));
         if (isAllComplete()) {
             mergeResult();
@@ -112,6 +112,7 @@ class JobScheduler {
 //        for (int i = 1;i<=t;++i) jobQueue.add(i);
 
         totalJobs = jobQueue.size();
+        if (totalJobs == 0) return;
         JobType job;
         while ((job = getJob())!= null){
             int jobId = job.SerialNum;

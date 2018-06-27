@@ -14,6 +14,8 @@ service Master {
   rpc Register (RegisterRequest) returns (RegisterReply) {}
   // worker send liveness info to master
   rpc Heartbeat (HeartbeatRequest) returns (HeartbeatReply) {}
+  // worker complete
+//  rpc WorkComplete (WorkCompleteRequest) returns (WorkCompleteReply) {}
 
   //client calls
   // client send new work demand to master

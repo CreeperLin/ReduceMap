@@ -39,7 +39,7 @@ class ClientRPCClient {
     // provide general call method
     Object call(String methodName, Object req) {
         try {
-            return blockingStub.getClass().getMethod(methodName, req.getClass()).invoke(blockingStub, req);
+            return blockingStub.getClass().getMethod(methodName, req.getClass()).invoke(blockingStub.withDeadlineAfter(1000,TimeUnit.SECONDS), req);
         } catch (StatusRuntimeException e) {
             logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
         } catch (Exception e) {

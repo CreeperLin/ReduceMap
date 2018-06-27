@@ -3,7 +3,12 @@ package org.acm.reducemap.master;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.acm.reducemap.common.RPCConfig;
+import org.acm.reducemap.worker.DescWorkReply;
+import org.acm.reducemap.worker.DescWorkRequest;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Set;
@@ -70,8 +75,29 @@ public class Master {
     void onNewWork(NewWorkReply.Builder reply, NewWorkRequest req) {
         int wt = getNewWorkType();
         String exec = req.getExecHandle();
-        workDescMap.put(wt,exec);
+        logger.info("recvReq NewWork:"+wt+" exec:"+exec);
 
+        StringBuilder srcb = new StringBuilder();
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(exec));
+            String t;
+            while((t=br.readLine())!=null){
+                srcb.append(t).append('\n');
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            reply.setWorkType(-1);
+            return;
+        }
+
+        workDescMap.put(wt,srcb.toString());
+
+        Vector<WorkerManager.workerInfo> worker = workerMan.getAllWorkers();
+        worker.forEach(i->{
+            DescWorkReply rep = (DescWorkReply)
+                    i.cli.call("descWork",DescWorkRequest.newBuilder().setWorkType(wt).setExec(srcb.toString()).build());
+            System.out.println("descWork:"+rep.getStatus());
+        });
         reply.setWorkType(wt);
     }
 
@@ -79,6 +105,7 @@ public class Master {
         int counter = 1;
         int wt = req.getWorkType();
         String param = req.getParamHandle();
+        logger.info("recvReq Execute:"+wt+" param:"+param);
         JsonParser parser = new JsonParser();
         JsonObject jb = (JsonObject) parser.parse(param);
         Set<String> keySet = jb.keySet();
@@ -90,7 +117,9 @@ public class Master {
         String para = json.toString();
         JobScheduler.JobType job = jobScheduler.new JobType(wt, counter, para);
         jobScheduler.addJob(job);
-
+        try {
+            jobScheduler.schedule();
+        } catch (InterruptedException ignored) {}
         reply.setStatus(0);
     }
 
@@ -105,7 +134,6 @@ public class Master {
         server.start();
         Thread bgThread = new Thread(new BackgroundActivity());
         bgThread.start();
-        jobScheduler.schedule();
         server.blockUntilShutdown();
     }
 

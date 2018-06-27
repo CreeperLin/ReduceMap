@@ -10,8 +10,7 @@ import org.python.core.PyObject;
 import org.python.core.adapter.PyObjectAdapter;
 import org.python.util.PythonInterpreter;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.*;
 import java.math.BigInteger;
 import java.util.Set;
 import java.util.Vector;
@@ -20,11 +19,9 @@ class JyExecutor {
 
     private PythonInterpreter interp = new PythonInterpreter();
 
-    JyExecutor() {
-        System.setProperty("python.import.site","false");
-    }
+    JyExecutor() { }
 
-    int run(String src, String args) {
+    int run(String desc, String src, String args) {
         System.out.println("JyExecutor running: args:"+args);
         JsonParser parser = new JsonParser();
         Set<String> keySet;
@@ -60,6 +57,7 @@ class JyExecutor {
             JsonElement obj = json.get(key);
             pyArgs.add(adapter.adapt(obj.getAsInt())); //TODO: add various types
         }
+        interp.set("output_name",Py.newString("./"+desc+".out"));
         interp.exec(src);
         PyObject[] pyArgArr = new PyObject[pyArgs.size()];
         pyArgs.toArray(pyArgArr);
@@ -68,7 +66,20 @@ class JyExecutor {
             System.out.println("function run not found");
             return -1;
         }
+//        File f = new File("./"+desc+".out");
+//        PrintStream cacheStream;
+//        try {
+//            f.createNewFile();
+//            cacheStream = new PrintStream(new FileOutputStream(f));
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return -1;
+//        }
+//        PrintStream oldStream = System.out;
+//        System.setOut(cacheStream);
         PyObject res = pyFunc.__call__(pyArgArr,keywords);
+//        System.setOut(oldStream);
+//        System.out.println(baoStream.toString());
         System.out.println("Jy Result:"+res);
         interp.cleanup();
 //        interp.close();
@@ -91,8 +102,8 @@ class JyExecutor {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        String arg = "{\"a\":5000, \"b\":5001}";
-        executor.run(sb.toString(),arg);
+        String arg = "{\"a\":2, \"b\":1000}";
+        executor.run("1",sb.toString(),arg);
     }
 
 }

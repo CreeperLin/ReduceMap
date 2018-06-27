@@ -47,7 +47,8 @@ public class MasterRPCClient {
 
     boolean asyncCall(String methodName, Object req, StreamObserver<?> observer) {
         try {
-            stub.getClass().getMethod(methodName, req.getClass(), StreamObserver.class).invoke(stub, req, observer);
+            stub.getClass().getMethod(methodName, req.getClass(), StreamObserver.class).invoke(stub.withDeadline(Deadline.after(1000,TimeUnit.SECONDS)), req, observer);
+            Thread.sleep(10000);
             return true;
         } catch (StatusRuntimeException e) {
             observer.onError(e);

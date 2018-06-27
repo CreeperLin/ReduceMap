@@ -6,6 +6,7 @@ import org.acm.reducemap.common.RPCConfig;
 import org.acm.reducemap.worker.AssignWorkReply;
 import org.acm.reducemap.worker.AssignWorkRequest;
 
+import java.io.*;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Random;
@@ -18,11 +19,12 @@ class JobScheduler {
     private Master master;
     private Logger logger;
     private ArrayDeque<JobType> jobQueue = new ArrayDeque<>();
-    private HashMap<Integer,Boolean> compMap = new HashMap<>();
+    private HashMap<Integer,AssignType> compMap = new HashMap<>();
+    private int totalJobs = 0;
 
-    private int result = 0; //demo
+//    private int result = 0; //demo
 
-    public class JobType {
+    class JobType {
         private int SerialNum;
         private String para;
         private int WorkType;
@@ -35,25 +37,66 @@ class JobScheduler {
             return SerialNum;
         }
     }
+
+    class AssignType {
+        private int jobId;
+        private int jobType;
+        private int workerId;
+        AssignType(int ji,int jt,int wi) {
+            jobId = ji;
+            jobType = jt;
+            workerId = wi;
+        }
+    }
+
     JobScheduler(Master mas, Logger log) {
         master = mas;
         logger = log;
     }
 
-    private void onJobComplete(int workerId, int jobId, AssignWorkReply reply) {
+    private void onJobComplete(int workerId, int jobId, int jobType, AssignWorkReply reply) {
         int status = reply.getStatus();
         System.out.println("get AssignWork reply id:"+workerId+" status:"+status);
-        result += status;
+//        result += status;
         master.workerMan.freeWorker(workerId);
-        compMap.put(jobId,true);
+        compMap.put(jobId,new AssignType(jobId,jobType,workerId));
         if (isAllComplete()) {
-            System.out.println("complete:"+result); //338350
+//            System.out.println("complete:"+result); //338350
+            mergeResult();
             master.onComplete();
         }
     }
 
+    private void mergeResult() {
+        System.out.println("Merging result:");
+        try {
+            BufferedWriter bw = new BufferedWriter(new FileWriter("./merge.out"));
+            for (int i = 1; i <= compMap.size(); ++i) {
+                AssignType asgn = compMap.get(i);
+                if (asgn==null) continue;
+                int workerId = asgn.workerId;
+                int jobType = asgn.jobType;
+                int jobId = asgn.jobId;
+                String filename = "./output_"+workerId+"_"+jobId+"_"+jobType+".out";
+                System.out.println("from:"+filename);
+                bw.write("from:"+filename);
+                bw.newLine();
+                BufferedReader br = new BufferedReader(new FileReader(filename));
+                String t;
+                while((t=br.readLine())!=null){
+                    bw.write(t);
+                    System.out.println(t);
+                    bw.newLine();
+                }
+            }
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private boolean isAllComplete() {
-        return compMap.size() == 100;
+        return compMap.size() == totalJobs;
     }
 
     synchronized void addJob(JobType job) {
@@ -69,16 +112,18 @@ class JobScheduler {
 //        int t = 100;
 //        for (int i = 1;i<=t;++i) jobQueue.add(i);
 
+        totalJobs = jobQueue.size();
         JobType job;
         while ((job = getJob())!= null){
             int jobId = job.SerialNum;
+            int jobType = job.WorkType;
             logger.info("Schedule:AssignWork:"+job.SerialNum);
             Vector<WorkerManager.workerInfo> avail = new Vector<>();
             while (true) {
                 while (true){
                     master.workerMan.getAvailableWorkers(avail);
                     if (!avail.isEmpty()) break;
-                    System.out.println("no worker available, retrying...");
+//                    System.out.println("no worker available, retrying...");
                     Thread.sleep(RPCConfig.masterScheduleRetryInterval);
                 }
                 int idx = new Random().nextInt(avail.size());
@@ -95,14 +140,14 @@ class JobScheduler {
 //                succ = (reply != null);
 
                 // async call demo
-                int finalJobId = jobId;
                 StreamObserver<AssignWorkReply> replyObserver = new StreamObserver<AssignWorkReply>() {
                     int wid = workerId;
-                    int jid = finalJobId;
+                    int jid = jobId;
+                    int jtype = jobType;
 
                     @Override
                     public void onNext(AssignWorkReply value) {
-                        onJobComplete(wid, jid, value);
+                        onJobComplete(wid, jid, jtype, value);
                     }
 
                     @Override
@@ -114,7 +159,7 @@ class JobScheduler {
                     public void onCompleted() {}
                 };
                 succ = rpc.asyncCall("assignWork",
-                        AssignWorkRequest.newBuilder().setWorkId(jobId).setWorkType(job.WorkType).setParamHandle(job.para).build(),replyObserver);
+                        AssignWorkRequest.newBuilder().setWorkId(jobId).setWorkType(jobType).setParamHandle(job.para).build(),replyObserver);
 
                 if (!succ) { //not working in async call?
                     logger.warning("worker down, retrying");

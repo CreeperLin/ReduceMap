@@ -66,7 +66,9 @@ public class Worker {
             reply.setStatus(-1);
             return;
         }
-        int ret = exec.run(src,req.getParamHandle());
+        String desc = "output_"+workerId+"_"+workId+"_"+workType;
+        int ret = exec.run(desc,src,req.getParamHandle());
+//        int ret = 0;
         System.out.println("done:"+workId+" ret:"+ret);
         reply.setStatus(ret);
     }
@@ -118,6 +120,7 @@ public class Worker {
 
     //usage: master_address master_port [port]
     public static void main(String[] args) throws IOException, InterruptedException {
+        System.setProperty("python.import.site","false");
         if (args.length<2) {
             logger.warning("specify master address and port");
             return;

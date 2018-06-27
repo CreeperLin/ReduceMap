@@ -19,8 +19,8 @@ public class Client {
         client = new ClientRPCClient(masterAddr,masterPort);
     }
 
-    static List<String> Paths = new LinkedList<>();
-    static List<String> Params = new LinkedList<>();
+    private static List<String> Paths = new LinkedList<>();
+    private static List<String> Params = new LinkedList<>();
 
     private void demo(){
         for(int i = 0; i < 10; i++){
@@ -40,7 +40,8 @@ public class Client {
             do{
                 reply1 = (ExecuteReply) client.call("execute",
                         ExecuteRequest.newBuilder().setWorkType(worktype).setParamHandle(Params.get(i)).build());
-            }while(reply1.getStatus() != 0);
+            }while(reply1!=null && reply1.getStatus() != 0);
+            System.out.println("execute complete: type:"+worktype);
         }
         client.shutdown();
     }

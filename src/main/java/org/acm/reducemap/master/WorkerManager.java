@@ -114,6 +114,10 @@ public class WorkerManager {
         });
     }
 
+    synchronized Vector<workerInfo> getAllWorkers() {
+        return new Vector<>(workerMap.values());
+    }
+
     synchronized Vector<workerInfo> getDeadWorkers() {
         Vector<workerInfo> ret = new Vector<>();
         long curTime = System.currentTimeMillis();

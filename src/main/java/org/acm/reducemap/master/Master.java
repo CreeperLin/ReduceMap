@@ -68,11 +68,15 @@ public class Master {
         int wt = getNewWorkType();
         String exec = req.getExecHandle();
         workDescMap.put(wt,exec);
+
         reply.setWorkType(wt);
     }
 
     void onExecute(ExecuteReply.Builder reply, ExecuteRequest req) {
         int wt = req.getWorkType();
+        String param = req.getParamHandle();
+
+        jobScheduler.addJob(1);
         reply.setStatus(0);
     }
 

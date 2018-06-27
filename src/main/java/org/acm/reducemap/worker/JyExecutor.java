@@ -11,9 +11,7 @@ import org.python.core.adapter.PyObjectAdapter;
 import org.python.util.PythonInterpreter;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.Set;
 import java.util.Vector;
@@ -22,7 +20,9 @@ class JyExecutor {
 
     private PythonInterpreter interp = new PythonInterpreter();
 
-    JyExecutor() {}
+    JyExecutor() {
+        System.setProperty("python.import.site","false");
+    }
 
     int run(String src, String args) {
         System.out.println("JyExecutor running: args:"+args);
@@ -36,7 +36,8 @@ class JyExecutor {
             e.printStackTrace();
             return -1;
         }
-        String[] keywords = (String[])keySet.toArray();
+        String[] keywords = new String[keySet.size()];
+        keySet.toArray(keywords);
         Vector<PyObject> pyArgs = new Vector<>();
         PyObjectAdapter adapter = new PyObjectAdapter() {
             @Override
@@ -57,12 +58,17 @@ class JyExecutor {
         };
         for (String key:keywords) {
             JsonElement obj = json.get(key);
-            PyObject p = new PyObject();
             pyArgs.add(adapter.adapt(obj.getAsInt())); //TODO: add various types
         }
-        interp.compile(src);
+        interp.exec(src);
+        PyObject[] pyArgArr = new PyObject[pyArgs.size()];
+        pyArgs.toArray(pyArgArr);
         PyFunction pyFunc = interp.get("run", PyFunction.class);
-        PyObject res = pyFunc.__call__((PyObject[]) pyArgs.toArray(),keywords);
+        if (pyFunc == null) {
+            System.out.println("function run not found");
+            return -1;
+        }
+        PyObject res = pyFunc.__call__(pyArgArr,keywords);
         System.out.println("Jy Result:"+res);
         interp.cleanup();
 //        interp.close();
@@ -70,6 +76,8 @@ class JyExecutor {
     }
 
     public static void main(String[] args) {
+        System.setProperty("python.import.site","false");
+//        System.setProperty("python.home","");
         JyExecutor executor = new JyExecutor();
         String path = "./1.py";
         BufferedReader br = null;
@@ -78,12 +86,12 @@ class JyExecutor {
             br = new BufferedReader(new FileReader(path));
             String t;
             while((t=br.readLine())!=null){
-                sb.append(t);
+                sb.append(t).append('\n');
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        String arg = "{\"a\":1, \"b\":false}";
+        String arg = "{\"a\":5000, \"b\":5001}";
         executor.run(sb.toString(),arg);
     }
 

@@ -54,6 +54,7 @@ class WorkerRPCServer {
             worker.onAssignWork(reply,req);
             responseObserver.onNext(reply.build());
             responseObserver.onCompleted();
+            worker.work();
         }
 
         @Override

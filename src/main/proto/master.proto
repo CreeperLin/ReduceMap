@@ -15,7 +15,7 @@ service Master {
   // worker send liveness info to master
   rpc Heartbeat (HeartbeatRequest) returns (HeartbeatReply) {}
   // worker complete
-//  rpc WorkComplete (WorkCompleteRequest) returns (WorkCompleteReply) {}
+  rpc JobComplete (JobCompleteRequest) returns (JobCompleteReply) {}
 
   //client calls
   // client send new work demand to master
@@ -64,4 +64,16 @@ message ExecuteRequest {
 message ExecuteReply {
     int32 status = 1;
     string result_handle = 2; //path to result file
+}
+
+message JobCompleteRequest {
+    int32 worker_id = 1;
+    int32 job_type = 2;
+    int32 job_id = 3;
+    int32 ret = 4;
+    string result_handle = 5;
+}
+
+message JobCompleteReply {
+    int32 status = 1;
 }

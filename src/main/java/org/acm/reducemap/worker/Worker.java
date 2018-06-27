@@ -1,13 +1,11 @@
 package org.acm.reducemap.worker;
 
 import org.acm.reducemap.common.RPCConfig;
-import org.acm.reducemap.master.HeartbeatReply;
-import org.acm.reducemap.master.HeartbeatRequest;
-import org.acm.reducemap.master.RegisterReply;
-import org.acm.reducemap.master.RegisterRequest;
+import org.acm.reducemap.master.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
@@ -36,11 +34,23 @@ public class Worker {
         }
     }
 
+    class WorkItem {
+        int workId;
+        int workType;
+        String param;
+        WorkItem(int wid, int wt, String p){
+            workId = wid;
+            workType = wt;
+            param = p;
+        }
+    }
+
     private boolean isRunning;
     private int workerId;
     private String localAddress;
     private int localPort;
     private HashMap<Integer,String> workDescMap = new HashMap<>();
+    private ArrayDeque<WorkItem> workQueue = new ArrayDeque<>();
 
     private WorkerRPCServer server;
     private WorkerRPCClient client;
@@ -59,18 +69,31 @@ public class Worker {
     void onAssignWork(AssignWorkReply.Builder reply, AssignWorkRequest req) {
         int workId = req.getWorkId(), workType = req.getWorkType();
         logger.info("recvReq AssignWork: workId:"+workId+" workType:"+workType);
-        System.out.println("do Work:"+workId);
-        String src = workDescMap.get(workId);
+        String src = workDescMap.get(workType);
         if (src == null) {
             logger.warning("Work description not exist");
             reply.setStatus(-1);
             return;
         }
-        String desc = "output_"+workerId+"_"+workId+"_"+workType;
-        int ret = exec.run(desc,src,req.getParamHandle());
+        workQueue.add(new WorkItem(workId,workType,req.getParamHandle()));
+        reply.setStatus(0);
+    }
+
+    void work() {
+        WorkItem item = workQueue.pop();
+        if (item == null) return;
+        int workId = item.workId;
+        int workType = item.workType;
+        String param = item.param;
+        System.out.println("do Work:"+workId);
+        String desc = "./output_"+workerId+"_"+workId+"_"+workType+".out";
+        int ret = exec.run(desc,workDescMap.get(workType),param);
 //        int ret = 0;
         System.out.println("done:"+workId+" ret:"+ret);
-        reply.setStatus(ret);
+        JobCompleteReply rep = (JobCompleteReply)
+                client.call("jobComplete",JobCompleteRequest.newBuilder()
+                .setWorkerId(workerId).setJobId(workId).setJobType(workType).setResultHandle(desc).setRet(ret).build());
+        System.out.println("get JobComplete status:"+rep.getStatus());
     }
 
     void onHaltWorker(HaltWorkerReply.Builder reply, HaltWorkerRequest req) {

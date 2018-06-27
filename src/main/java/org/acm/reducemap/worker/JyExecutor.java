@@ -57,7 +57,7 @@ class JyExecutor {
             JsonElement obj = json.get(key);
             pyArgs.add(adapter.adapt(obj.getAsInt())); //TODO: add various types
         }
-        interp.set("output_name",Py.newString("./"+desc+".out"));
+        interp.set("output_name",Py.newString(desc));
         interp.exec(src);
         PyObject[] pyArgArr = new PyObject[pyArgs.size()];
         pyArgs.toArray(pyArgArr);

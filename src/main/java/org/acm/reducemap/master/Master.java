@@ -71,6 +71,13 @@ public class Master {
         reply.setStatus(1);
     }
 
+    void onJobComplete(JobCompleteReply.Builder reply, JobCompleteRequest req) {
+        logger.info("recvReq JobComplete:"+req.getJobId());
+        workerMan.freeWorker(req.getWorkerId());
+        jobScheduler.onJobComplete(req);
+        reply.setStatus(0);
+    }
+
     // client calls
     void onNewWork(NewWorkReply.Builder reply, NewWorkRequest req) {
         int wt = getNewWorkType();
@@ -101,8 +108,22 @@ public class Master {
         reply.setWorkType(wt);
     }
 
-    void onExecute(ExecuteReply.Builder reply, ExecuteRequest req) {
+    private void queue(int wt, int lowbound, int upbound) {
         int counter = 1;
+        int curl = lowbound;
+        int step = (upbound - lowbound) / 10;
+        for (int i = 1;i<=10;++i) {
+            JsonObject json = new JsonObject();
+            json.addProperty("a",curl);
+            curl += step;
+            json.addProperty("b",curl);
+            String para = json.toString();
+            JobScheduler.JobType job = jobScheduler.new JobType(wt, i, para);
+            jobScheduler.addJob(job);
+        }
+    }
+
+    void onExecute(ExecuteReply.Builder reply, ExecuteRequest req) {
         int wt = req.getWorkType();
         String param = req.getParamHandle();
         logger.info("recvReq Execute:"+wt+" param:"+param);
@@ -111,12 +132,7 @@ public class Master {
         Set<String> keySet = jb.keySet();
         int lowbound = jb.get("a").getAsInt();
         int upbound = jb.get("b").getAsInt();
-        JsonObject json = new JsonObject();
-        json.addProperty("a",lowbound);
-        json.addProperty("b",upbound);
-        String para = json.toString();
-        JobScheduler.JobType job = jobScheduler.new JobType(wt, counter, para);
-        jobScheduler.addJob(job);
+        queue(wt,lowbound,upbound);
         try {
             jobScheduler.schedule();
         } catch (InterruptedException ignored) {}

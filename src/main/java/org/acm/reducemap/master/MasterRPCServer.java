@@ -82,5 +82,13 @@ public class MasterRPCServer {
             responseObserver.onNext(reply.build());
             responseObserver.onCompleted();
         }
+
+        @Override
+        public void jobComplete(JobCompleteRequest request, StreamObserver<JobCompleteReply> responseObserver) {
+            JobCompleteReply.Builder reply = JobCompleteReply.newBuilder();
+            master.onJobComplete(reply,request);
+            responseObserver.onNext(reply.build());
+            responseObserver.onCompleted();
+        }
     }
 }

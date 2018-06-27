@@ -14,7 +14,7 @@ public class RPCConfig {
     public static long workerHeartbeatInterval = 5000;
     public static long workerHeartbeatRetryInterval = 3000;
     public static long workerDeadTimeout = 15000;
-    public static long workerOverdueTimeout = 20000;
+    public static long workerOverdueTimeout = 30000;
 
     public static long masterBackgroundInterval = 3000;
     public static long masterScheduleRetryInterval = 500;

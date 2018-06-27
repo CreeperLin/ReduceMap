@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import org.acm.reducemap.common.RPCConfig;
 import org.acm.reducemap.worker.DescWorkReply;
 import org.acm.reducemap.worker.DescWorkRequest;
+import org.python.modules.math;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -111,12 +112,36 @@ public class Master {
         Set<String> keySet = jb.keySet();
         int lowbound = jb.get("a").getAsInt();
         int upbound = jb.get("b").getAsInt();
-        JsonObject json = new JsonObject();
-        json.addProperty("a",lowbound);
-        json.addProperty("b",upbound);
-        String para = json.toString();
-        JobScheduler.JobType job = jobScheduler.new JobType(wt, counter, para);
-        jobScheduler.addJob(job);
+//        JsonObject json = new JsonObject();
+//        json.addProperty("a",lowbound);
+//        json.addProperty("b", (lowbound + upbound)/2);
+//        String para = json.toString();
+//        JobScheduler.JobType job = jobScheduler.new JobType(wt, counter, para);
+//        jobScheduler.addJob(job);
+//        JsonObject json2 = new JsonObject();
+//        json2.addProperty("a",(lowbound + upbound)/2);
+//        json2.addProperty("b", upbound);
+//        String para2 = json2.toString();
+//        JobScheduler.JobType job2 = jobScheduler.new JobType(wt, 2, para2);
+//        jobScheduler.addJob(job2);
+        for (int i = (int)math.pow(lowbound - 1, 3) ; i <= (int)math.pow(upbound, 3); i = i + 1000*1000*1000){
+            JsonObject json = new JsonObject();
+            int aa = (int)math.floor(math.pow(i, 1.0/3)) + 1;
+            json.addProperty("a",aa);
+            if(i + 1000 * 1000 * 1000 <= (int)math.pow(upbound, 3)){
+                int bb = (int)math.floor(math.pow(i + 1000 * 1000 * 1000, 1.0/3));
+                json.addProperty("b",bb);
+            }
+            else {
+                int bb = upbound;
+                json.addProperty("b", bb);
+            }
+            String para = json.toString();
+            JobScheduler.JobType job = jobScheduler.new JobType(wt, counter, para);
+            jobScheduler.addJob(job);
+            ++counter;
+        }
+
         try {
             jobScheduler.schedule();
         } catch (InterruptedException ignored) {}

@@ -23,7 +23,7 @@ service Master {
 }
 
 // register request message to master
-message RegisterRequest {
+message RegisterRequest {E
     string ip_address = 1;
 }
 

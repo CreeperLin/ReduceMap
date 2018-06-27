@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import org.acm.reducemap.common.RPCConfig;
 import org.acm.reducemap.worker.DescWorkReply;
 import org.acm.reducemap.worker.DescWorkRequest;
+import org.python.modules.math;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -110,16 +111,22 @@ public class Master {
 
     private void queue(int wt, int lowbound, int upbound) {
         int counter = 1;
-        int curl = lowbound;
-        int step = (upbound - lowbound) / 10;
-        for (int i = 1;i<=10;++i) {
+        for (int i = (int)math.pow(lowbound - 1, 3) ; i <= (int)math.pow(upbound, 3); i = i + 1000*1000*1000){
             JsonObject json = new JsonObject();
-            json.addProperty("a",curl);
-            curl += step;
-            json.addProperty("b",curl);
+            int aa = (int)math.floor(math.pow(i, 1.0/3)) + 1;
+            json.addProperty("a",aa);
+            if(i + 1000 * 1000 * 1000 <= (int)math.pow(upbound, 3)){
+                int bb = (int)math.floor(math.pow(i + 1000 * 1000 * 1000, 1.0/3));
+                json.addProperty("b",bb);
+            }
+            else {
+                int bb = upbound;
+                json.addProperty("b", bb);
+            }
             String para = json.toString();
-            JobScheduler.JobType job = jobScheduler.new JobType(wt, i, para);
+            JobScheduler.JobType job = jobScheduler.new JobType(wt, counter, para);
             jobScheduler.addJob(job);
+            ++counter;
         }
     }
 
